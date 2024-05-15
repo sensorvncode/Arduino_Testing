@@ -1,7 +1,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_ST7735.h>
 #include <SPI.h>
-#include <Ethernet.h>
 
 /* Variables */
 // For 1.44" with ST7735 use:
