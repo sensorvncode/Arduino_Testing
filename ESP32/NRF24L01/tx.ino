@@ -45,8 +45,13 @@ void setupNRF24L01() {
   }
   radio.openWritingPipe(address);
   radio.setPALevel(RF24_PA_MAX, 1);
+  delay(1000);
+  if (radio.setDataRate(RF24_250KBPS))
+    printLcd("NRF24L01 setDataRate OK");
+  else
+    printLcd("NRF24L01 setDataRate FAIL");
   radio.stopListening();
-  delay(2000);
+  delay(1000);
 }
 
 /* Main Function */
