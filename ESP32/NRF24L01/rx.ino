@@ -1,33 +1,44 @@
 #include <SPI.h>
 #include <nRF24L01.h>
 #include <RF24.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 /* Variables */
 RF24 radio(4, 5);  // CE, CSN
 const byte address[6] = "1207";
 #define LED 2
 
+/* My Functions */
+void printLCD(const char* data) {
+  lcd.setCursor(0, 0);
+  lcd.print(data);
+}
+
 /* Main Function */
 void setup() {
   // Serial
-  Serial.begin(9600);
+  lcd.init();
+  lcd.backlight();
   // NRF24L01
   radio.begin();
   if (radio.isChipConnected())
-    Serial.println("NRF24L01 OK");
+    printLCD("NRF24L01 OK");
   else {
-    Serial.println("NRF24L01 FAIL");
+    printLCD("NRF24L01 FAIL");
     while (true)
       ;
   }
   radio.openReadingPipe(0, address);
   radio.setPALevel(RF24_PA_MAX, 1);
+  delay(1000);
   if (radio.setDataRate(RF24_250KBPS))
-    Serial.println("NRF24L01 setDataRate OK");
+    printLCD("setDataRate OK");
   else
-    Serial.println("NRF24L01 setDataRate FAIL");
+    printLCD("setDataRate FAIL");
   radio.startListening();
-  delay(2000);
+  delay(1000);
   // LED
   pinMode(LED, OUTPUT);
 }
@@ -35,12 +46,14 @@ void setup() {
 void loop() {
   bool goodSignal = radio.testRPD();
   if (radio.available()) {
+    lcd.clear();
     // Test signal
-    Serial.println(goodSignal ? "Strong > -64dBm" : "Weak < -64dBm");
+    printLCD(goodSignal ? "Strong > -64dBm" : "Weak < -64dBm");
     // Data
     char text[3] = "";
     radio.read(&text, sizeof(text));
-    Serial.println(text);
+    lcd.setCursor(0, 1);
+    lcd.print(text);
     if (strcmp(text, "On") == 0)
       digitalWrite(LED, HIGH);
     else
