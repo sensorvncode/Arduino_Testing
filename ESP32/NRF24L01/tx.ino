@@ -63,15 +63,22 @@ void setup(void) {
 }
 
 void loop() {
+  // ON
   const char text[] = "On";
-  radio.write(&text, sizeof(text));
-  printLcd("State:");
-  printLcdAxis(0, 12, "Turn on", ST77XX_GREEN);
+  if (radio.write(&text, sizeof(text)))
+    printLcd("Successfull ");
+  else
+    printLcd("Failed or timed out");
+  printLcdAxis(0, 18, "Turn on", ST77XX_GREEN);
   delay(5000);
-  radio.openWritingPipe(address);
+  setupNRF24L01();
+  // OFF
   const char text2[] = "Off";
-  radio.write(&text2, sizeof(text2));
-  printLcd("State:");
-  printLcdAxis(0, 12, "Turn off", ST77XX_RED);
+  if (radio.write(&text2, sizeof(text2)))
+    printLcd("Successfull ");
+  else
+    printLcd("Failed or timed out");
+  printLcdAxis(0, 18, "Turn off", ST77XX_RED);
   delay(5000);
+  setupNRF24L01();
 }
