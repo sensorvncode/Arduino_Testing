@@ -4,8 +4,8 @@
 // Similar to https://github.com/Levi--G/IMU-WhoAmIVerifier
 // Do be aware that MPU9150's will report as 6050s, this is because a 9150 is a 6050 with a magnetometer
 // if you have a 9250 board and it reports as a 6050, it's most likely a 9150.
-//This code will check for an IMU when reset and, if one is found, it will report what it is.
-//To re run the check without resetting the Arduino, pull pin 4 to GND.
+// This code will check for an IMU when reset and, if one is found, it will report what it is.
+// To re run the check without resetting the Arduino, pull pin 4 to GND.
 #define NUM_IMUS 40
 bool errorflag;
 typedef struct IMU {
