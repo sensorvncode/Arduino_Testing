@@ -31,7 +31,7 @@ void loop() {
 
   Serial.print("Pressure: ");
   Serial.print(pressure / 100.0);
-  Serial.println(" Pa");
+  Serial.println(" hPa");
   delay(1000);
 }
 
