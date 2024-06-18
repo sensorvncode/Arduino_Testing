@@ -10,7 +10,8 @@ int32_t B5;  // Declare B5 as a global variable
 
 void setup() {
   Serial.begin(9600);
-  Serial.println("sensorvn.com");
+  delay(500);
+  Serial.println("Code written by sensorvn.com");
   delay(5000);
   Wire.begin();
 
