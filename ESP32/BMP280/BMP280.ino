@@ -38,6 +38,9 @@ void readSensorData(int32_t &temperature, uint32_t &pressure);
 
 void setup() {
   Serial.begin(9600);
+  delay(500);
+  Serial.println("Code written by sensorvn.com");
+  delay(5000);
   Wire.begin();
   initializeBMP280();
 }
