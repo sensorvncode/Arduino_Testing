@@ -1,0 +1,227 @@
+#include <Wire.h>
+
+#define AHT20_ADDRESS 0x38
+#define AHT20_INIT_CMD 0xBE
+#define AHT20_MEAS_CMD 0xAC
+#define AHT20_STATUS_CMD 0x71
+
+// BMP280 default address.
+#define BMP280_ADDRESS 0x77
+
+// BMP280 registers.
+#define BMP280_REG_TEMP_XLSB 0xFC
+#define BMP280_REG_TEMP_LSB 0xFB
+#define BMP280_REG_TEMP_MSB 0xFA
+#define BMP280_REG_PRESS_XLSB 0xF9
+#define BMP280_REG_PRESS_LSB 0xF8
+#define BMP280_REG_PRESS_MSB 0xF7
+#define BMP280_REG_CONFIG 0xF5
+#define BMP280_REG_CTRL_MEAS 0xF4
+#define BMP280_REG_ID 0xD0
+#define BMP280_REG_RESET 0xE0
+
+// Calibration data registers.
+#define BMP280_REG_CALIB_00 0x88
+#define BMP280_REG_CALIB_25 0xA1
+
+// Calibration parameters.
+uint16_t dig_T1;
+int16_t dig_T2, dig_T3;
+uint16_t dig_P1;
+int16_t dig_P2, dig_P3, dig_P4, dig_P5, dig_P6, dig_P7, dig_P8, dig_P9;
+int32_t t_fine;
+
+// Function prototypes for BMP280.
+void writeRegister(uint8_t reg, uint8_t value);
+uint8_t readRegister(uint8_t reg);
+void readRegisters(uint8_t reg, uint8_t *buffer, uint8_t length);
+void readCalibrationData();
+int32_t compensateTemperature(int32_t adc_T);
+uint32_t compensatePressure(int32_t adc_P);
+void initializeBMP280();
+void readBMP280Data(int32_t &temperature, uint32_t &pressure);
+
+void setup() {
+  Serial.begin(115200);
+  Wire.begin();
+  delay(500);
+  Serial.println("Code written by sensorvn.com");
+  delay(5000);
+
+  // Initialize the AHT20 sensor.
+  Wire.beginTransmission(AHT20_ADDRESS);
+  Wire.write(AHT20_INIT_CMD);
+  Wire.write(0x08);  // Calibration enable.
+  Wire.write(0x00);
+  if (Wire.endTransmission() != 0) {
+    Serial.println("Failed to initialize AHT20 sensor!");
+    while (1) delay(10);
+  }
+  delay(100);  // Wait for initialization.
+  Serial.println("AHT20 initialized");
+
+  // Initialize the BMP280 sensor.
+  initializeBMP280();
+}
+
+void loop() {
+  // Read AHT20 data.
+  readAHT20Data();
+
+  // Read BMP280 data.
+  int32_t temperature;
+  uint32_t pressure;
+  readBMP280Data(temperature, pressure);
+
+  // Print BMP280 temperature and pressure.
+  Serial.print("BMP280 Temperature: ");
+  Serial.print(temperature / 100.0);
+  Serial.println(" °C");
+  Serial.print("Pressure: ");
+  Serial.print(pressure / 25600.0);
+  Serial.println(" hPa");
+
+  Serial.println();
+  Serial.println();
+  delay(1000);
+}
+
+void readAHT20Data() {
+  // Trigger a measurement.
+  Wire.beginTransmission(AHT20_ADDRESS);
+  Wire.write(AHT20_MEAS_CMD);
+  Wire.write(0x33);
+  Wire.write(0x00);
+  Wire.endTransmission();
+  delay(80);  // Measurement time.
+
+  // Read the result.
+  Wire.requestFrom(AHT20_ADDRESS, 7);
+  if (Wire.available() == 7) {
+    uint8_t data[7];
+    for (int i = 0; i < 7; i++) {
+      data[i] = Wire.read();
+    }
+
+    // Process the data.
+    uint32_t rawHumidity = ((uint32_t)data[1] << 12) | ((uint32_t)data[2] << 4) | ((uint32_t)data[3] >> 4);
+    uint32_t rawTemperature = (((uint32_t)data[3] & 0x0F) << 16) | ((uint32_t)data[4] << 8) | (uint32_t)data[5];
+
+    float humidity = ((rawHumidity * 100.0) / 1048576.0);
+    float temperature = ((rawTemperature * 200.0) / 1048576.0) - 50.0;
+
+    Serial.print("AHT20 Temperature: ");
+    Serial.print(temperature);
+    Serial.println(" degrees C");
+    Serial.print("Humidity: ");
+    Serial.print(humidity);
+    Serial.println(" % rH");
+  } else {
+    Serial.println("Failed to read data from AHT20 sensor!");
+  }
+}
+
+void initializeBMP280() {
+  // Read and verify chip ID.
+  uint8_t chipID = readRegister(BMP280_REG_ID);
+  if (chipID != 0x58) {
+    Serial.println("BMP280 not found!");
+    while (1)
+      ;
+  }
+
+  // Reset the sensor.
+  writeRegister(BMP280_REG_RESET, 0xB6);
+  delay(100);
+
+  // Read calibration data.
+  readCalibrationData();
+
+  // Set configuration and control measurement registers.
+  writeRegister(BMP280_REG_CONFIG, 0x00);     // No IIR filter.
+  writeRegister(BMP280_REG_CTRL_MEAS, 0x27);  // Temperature and pressure oversampling rate = 1, normal mode.
+}
+
+void readBMP280Data(int32_t &temperature, uint32_t &pressure) {
+  // Read raw temperature and pressure data.
+  uint8_t data[6];
+  readRegisters(BMP280_REG_PRESS_MSB, data, 6);
+
+  int32_t adc_P = (int32_t)(((uint32_t)data[0] << 12) | ((uint32_t)data[1] << 4) | ((data[2] >> 4) & 0x0F));
+  int32_t adc_T = (int32_t)(((uint32_t)data[3] << 12) | ((uint32_t)data[4] << 4) | ((data[5] >> 4) & 0x0F));
+
+  // Compensate temperature and pressure.
+  temperature = compensateTemperature(adc_T);
+  pressure = compensatePressure(adc_P);
+}
+
+void writeRegister(uint8_t reg, uint8_t value) {
+  Wire.beginTransmission(BMP280_ADDRESS);
+  Wire.write(reg);
+  Wire.write(value);
+  Wire.endTransmission();
+}
+
+uint8_t readRegister(uint8_t reg) {
+  Wire.beginTransmission(BMP280_ADDRESS);
+  Wire.write(reg);
+  Wire.endTransmission();
+  Wire.requestFrom(BMP280_ADDRESS, 1);
+  return Wire.read();
+}
+
+void readRegisters(uint8_t reg, uint8_t *buffer, uint8_t length) {
+  Wire.beginTransmission(BMP280_ADDRESS);
+  Wire.write(reg);
+  Wire.endTransmission();
+  Wire.requestFrom(BMP280_ADDRESS, length);
+  for (uint8_t i = 0; i < length; i++) {
+    buffer[i] = Wire.read();
+  }
+}
+
+void readCalibrationData() {
+  uint8_t calib[24];
+  readRegisters(BMP280_REG_CALIB_00, calib, 24);
+
+  dig_T1 = (uint16_t)(((uint16_t)calib[1] << 8) | calib[0]);
+  dig_T2 = (int16_t)(((int16_t)calib[3] << 8) | calib[2]);
+  dig_T3 = (int16_t)(((int16_t)calib[5] << 8) | calib[4]);
+  dig_P1 = (uint16_t)(((uint16_t)calib[7] << 8) | calib[6]);
+  dig_P2 = (int16_t)(((int16_t)calib[9] << 8) | calib[8]);
+  dig_P3 = (int16_t)(((int16_t)calib[11] << 8) | calib[10]);
+  dig_P4 = (int16_t)(((int16_t)calib[13] << 8) | calib[12]);
+  dig_P5 = (int16_t)(((int16_t)calib[15] << 8) | calib[14]);
+  dig_P6 = (int16_t)(((int16_t)calib[17] << 8) | calib[16]);
+  dig_P7 = (int16_t)(((int16_t)calib[19] << 8) | calib[18]);
+  dig_P8 = (int16_t)(((int16_t)calib[21] << 8) | calib[20]);
+  dig_P9 = (int16_t)(((int16_t)calib[23] << 8) | calib[22]);
+}
+
+int32_t compensateTemperature(int32_t adc_T) {
+  int32_t var1, var2, T;
+  var1 = ((((adc_T >> 3) - ((int32_t)dig_T1 << 1))) * ((int32_t)dig_T2)) >> 11;
+  var2 = (((((adc_T >> 4) - ((int32_t)dig_T1)) * ((adc_T >> 4) - ((int32_t)dig_T1))) >> 12) * ((int32_t)dig_T3)) >> 14;
+  t_fine = var1 + var2;
+  T = (t_fine * 5 + 128) >> 8;
+  return T;
+}
+
+uint32_t compensatePressure(int32_t adc_P) {
+  int64_t var1, var2, p;
+  var1 = ((int64_t)t_fine) - 128000;
+  var2 = var1 * var1 * (int64_t)dig_P6;
+  var2 = var2 + ((var1 * (int64_t)dig_P5) << 17);
+  var2 = var2 + (((int64_t)dig_P4) << 35);
+  var1 = ((var1 * var1 * (int64_t)dig_P3) >> 8) + ((var1 * (int64_t)dig_P2) << 12);
+  var1 = (((((int64_t)1) << 47) + var1) * ((int64_t)dig_P1)) >> 33;
+  if (var1 == 0) {
+    return 0;  // Avoid division by zero.
+  }
+  p = 1048576 - adc_P;
+  p = (((p << 31) - var2) * 3125) / var1;
+  var1 = (((int64_t)dig_P9) * (p >> 13) * (p >> 13)) >> 25;
+  var2 = (((int64_t)dig_P8) * p) >> 19;
+  p = ((p + var1 + var2) >> 8) + (((int64_t)dig_P7) << 4);
+  return (uint32_t)p;
+}
