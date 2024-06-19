@@ -90,8 +90,8 @@ int32_t readTemperature() {
 }
 
 int32_t readPressure() {
-  writeRegister(0xF4, 0x34);
-  delay(5);  // Wait for conversion to complete
+  writeRegister(0xF4, 0xF4);
+  delay(30);  // Wait for conversion to complete
 
   int32_t UP = read16(0xF6);
   UP = (UP << 8) | readRegister(0xF8);
