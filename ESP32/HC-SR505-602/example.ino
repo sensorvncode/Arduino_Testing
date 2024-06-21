@@ -3,6 +3,9 @@
 
 void setup() {
   Serial.begin(9600);
+  delay(500);
+  Serial.println("Code written by sensorvn.com");
+  delay(1000);
   pinMode(sensor, INPUT);
   pinMode(LED, OUTPUT);
   digitalWrite(sensor, LOW);
