@@ -54,7 +54,7 @@ void work() {
   }
   flag2 = 0;
   flag = 0;
-  delay(500);
+  delay(200);
   attachInterrupt(digitalPinToInterrupt(SDO_), handleInterrupt, FALLING);
 }
 void handleInterrupt() {
