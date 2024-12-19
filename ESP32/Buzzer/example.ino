@@ -1,6 +1,6 @@
+/* Variables */
 // Chân kết nối với buzzer
 const int buzzerPin = 52;
-
 // Các tần số của các nốt nhạc
 int note_C = 261;
 int note_D = 293;
@@ -9,10 +9,10 @@ int note_F = 349;
 int note_G = 392;
 int note_A = 440;
 int note_B = 493;
-
 // Nhịp độ (delay giữa các nốt nhạc)
 int tempo = 400;  // Tốc độ nhịp của bài hát (ms giữa các nốt)
 
+/* Main Functions */
 void setup() {
   pinMode(buzzerPin, OUTPUT);
 }
@@ -22,7 +22,7 @@ void loop() {
   // Do
   tone(buzzerPin, note_C);
   delay(tempo);
-  noTone(buzzerPin);  // Dừng phát âm thanh
+  noTone(buzzerPin); // Ngưng tạo xung
 
   // Re
   tone(buzzerPin, note_D);
@@ -55,6 +55,6 @@ void loop() {
   noTone(buzzerPin);
 
   // Lặp lại từ đầu
-  digitalWrite(buzzerPin, HIGH);
+  digitalWrite(buzzerPin, HIGH); // Tắt
   delay(1000);  // Thời gian nghỉ giữa các vòng chơi
 }
