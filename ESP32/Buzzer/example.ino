@@ -1,14 +1,14 @@
 /* Variables */
 // Chân kết nối với buzzer
-const int buzzerPin = 52;
+#define buzzerPin 52
 // Các tần số của các nốt nhạc
-int note_C = 261;
-int note_D = 293;
-int note_E = 329;
-int note_F = 349;
-int note_G = 392;
-int note_A = 440;
-int note_B = 493;
+#define note_C  261
+#define note_D  293
+#define note_E  329
+#define note_F  349
+#define note_G  392
+#define note_A  440
+#define note_B  493
 // Nhịp độ (delay giữa các nốt nhạc)
 int tempo = 400;  // Tốc độ nhịp của bài hát (ms giữa các nốt)
 
